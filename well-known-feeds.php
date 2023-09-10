@@ -17,20 +17,20 @@ namespace Well_Known_Feeds;
 function get_blog_feeds( $args = array() ) {
 	$defaults = array(
 		/* translators: Separator between blog name and feed type in feed links */
-		'separator'     => _x( '-', 'feed link', 'wellknownfeeds' ),
+		'separator'     => \_x( '-', 'feed link', 'wellknownfeeds' ),
 		/* translators: 1: blog name, 2: separator(raquo), 3: post type */
-		'posttypetitle' => __( '%1$s Post-Type %2$s %3$s Feed', 'wellknownfeeds' ),
+		'posttypetitle' => \__( '%1$s Post-Type %2$s %3$s Feed', 'wellknownfeeds' ),
 		/* translators: 1: Site title, 2: Separator (raquo). */
-		'feedtitle'     => __( '%1$s %2$s %3$s Feed', 'wellknownfeeds' ),
+		'feedtitle'     => \__( '%1$s %2$s %3$s Feed', 'wellknownfeeds' ),
 		/* translators: 1: Site title, 2: Separator (raquo). */
-		'comstitle'     => __( 'Comments %1$s %2$s Feed', 'wellknownfeeds' ),
+		'comstitle'     => \__( 'Comments %1$s %2$s Feed', 'wellknownfeeds' ),
 	);
 
 	$args  = wp_parse_args( $args, $defaults );
 	$feeds = array();
 
 	// does theme support post formats
-	$post_formats = get_theme_support( 'post-formats' );
+	$post_formats = \get_theme_support( 'post-formats' );
 
 	if ( $post_formats ) {
 		$post_formats = current( $post_formats );
@@ -42,23 +42,23 @@ function get_blog_feeds( $args = array() ) {
 
 	foreach ( $post_formats as $post_format ) {
 		$feeds[] = array(
-			'title'   => sprintf( $args['posttypetitle'], get_post_format_string( $post_format ), $args['separator'], esc_attr( strtoupper( get_default_feed() ) ) ),
+			'title'   => sprintf( $args['posttypetitle'], \get_post_format_string( $post_format ), $args['separator'], \esc_attr( \strtoupper( \get_default_feed() ) ) ),
 			'href'    => get_post_format_archive_feed_link( $post_format ),
-			'version' => get_default_feed(),
+			'version' => \get_default_feed(),
 		);
 	}
 
 	// Add "standard" post-format feed discovery
 	global $wp_query;
 	if (
-		is_archive() &&
-		isset( $wp_query->query['post_format'] ) &&
+		\is_archive() &&
+		\isset( $wp_query->query['post_format'] ) &&
 		'post-format-standard' === $wp_query->query['post_format']
 	) {
 		$feeds[] = array(
-			'title'   => sprintf( $args['posttypetitle'], get_post_format_string( 'standard' ), $args['separator'], esc_attr( strtoupper( get_default_feed() ) ) ),
+			'title'   => sprintf( $args['posttypetitle'], get_post_format_string( 'standard' ), $args['separator'], \esc_attr( \strtoupper( \get_default_feed() ) ) ),
 			'href'    => get_post_format_archive_feed_link( 'standard' ),
-			'version' => get_default_feed(),
+			'version' => \get_default_feed(),
 		);
 	}
 
@@ -87,7 +87,7 @@ function get_blog_feeds( $args = array() ) {
  * @return void
  */
 function get_post_format_archive_feed_link( $post_format, $feed = '' ) {
-	$default_feed = get_default_feed();
+	$default_feed = \get_default_feed();
 	if ( empty( $feed ) ) {
 		$feed = $default_feed;
 	}
@@ -97,14 +97,14 @@ function get_post_format_archive_feed_link( $post_format, $feed = '' ) {
 		return false;
 	}
 
-	if ( get_option( 'permalink_structure' ) ) {
-		$link  = trailingslashit( $link );
+	if ( \get_option( 'permalink_structure' ) ) {
+		$link  = \trailingslashit( $link );
 		$link .= 'feed/';
 		if ( $feed !== $default_feed ) {
 			$link .= "$feed/";
 		}
 	} else {
-		$link = add_query_arg( 'feed', $feed, $link );
+		$link = \add_query_arg( 'feed', $feed, $link );
 	}
 
 	/**
@@ -113,7 +113,7 @@ function get_post_format_archive_feed_link( $post_format, $feed = '' ) {
 	 * @param string $link The post type archive feed link.
 	 * @param string $feed Feed type. Possible values include 'rss2', 'atom'.
 	 */
-	return apply_filters( 'post_format_archive_feed_link', $link, $feed );
+	return \apply_filters( 'post_format_archive_feed_link', $link, $feed );
 }
 
 /**
@@ -125,7 +125,7 @@ function get_post_format_archive_feed_link( $post_format, $feed = '' ) {
  */
 function get_post_format_link( $post_format ) {
 	if ( 'standard' !== $post_format ) {
-		return get_post_format_link( $post_format );
+		return \get_post_format_link( $post_format );
 	}
 
 	global $wp_rewrite;
@@ -134,10 +134,10 @@ function get_post_format_link( $post_format ) {
 
 	if ( empty( $termlink ) ) {
 		$termlink = '?post_format=standard';
-		$termlink = home_url( $termlink );
+		$termlink = \home_url( $termlink );
 	} else {
-		$termlink = str_replace( '%post_format%', 'standard', $termlink );
-		$termlink = home_url( user_trailingslashit( $termlink, 'category' ) );
+		$termlink = \str_replace( '%post_format%', 'standard', $termlink );
+		$termlink = \home_url( \user_trailingslashit( $termlink, 'category' ) );
 	}
 
 	return $termlink;
@@ -161,12 +161,12 @@ function parse_request( $wp ) {
 		return;
 	}
 
-	header( 'Content-Type: text/xml; charset=' . get_option( 'blog_charset' ), true );
+	header( 'Content-Type: text/xml; charset=' . \get_option( 'blog_charset' ), true );
 
-	load_template( plugin_dir_path( __FILE__ ) . '/well-known-feeds-template.php', true );
+	\load_template( \plugin_dir_path( __FILE__ ) . '/well-known-feeds-template.php', true );
 	exit;
 }
-add_action( 'parse_request', __NAMESPACE__ . '\parse_request' );
+\add_action( 'parse_request', __NAMESPACE__ . '\parse_request' );
 
 /**
  * Accept .well-known query variables.
@@ -175,7 +175,7 @@ function query_vars( $vars ) {
 	$vars[] = 'well-known';
 	return $vars;
 }
-add_action( 'query_vars', __NAMESPACE__ . '\query_vars' );
+\add_action( 'query_vars', __NAMESPACE__ . '\query_vars' );
 
 /**
  * Add rewrite rules for .well-known/feeds.
@@ -183,7 +183,7 @@ add_action( 'query_vars', __NAMESPACE__ . '\query_vars' );
 function rewrite_rules() {
 	add_rewrite_rule( '^.well-known/feeds', 'index.php?well-known=feeds', 'top' );
 }
-add_action( 'init', __NAMESPACE__ . '\rewrite_rules', 15 );
+\add_action( 'init', __NAMESPACE__ . '\rewrite_rules', 15 );
 
 /**
  * Add rewrite rules for .well-known/feeds.
@@ -192,5 +192,5 @@ function flush_rewrite_rules() {
 	namespace\rewrite_rules();
 	\flush_rewrite_rules();
 }
-register_activation_hook( __FILE__, __NAMESPACE__ . '\flush_rewrite_rules' );
-register_deactivation_hook( __FILE__, __NAMESPACE__ . '\flush_rewrite_rules' );
+\register_activation_hook( __FILE__, __NAMESPACE__ . '\flush_rewrite_rules' );
+\register_deactivation_hook( __FILE__, __NAMESPACE__ . '\flush_rewrite_rules' );
