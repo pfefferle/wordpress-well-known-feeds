@@ -180,7 +180,7 @@ add_action( 'query_vars', __NAMESPACE__ . '\query_vars' );
  * Add rewrite rules for .well-known/feeds.
  */
 function rewrite_rules() {
-	add_rewrite_rule( '.well-known/feeds/?', 'index.php?well-known=feeds', 'top' );
+	add_rewrite_rule( '^.well-known/feeds', 'index.php?well-known=feeds', 'top' );
 }
 add_action( 'init', __NAMESPACE__ . '\rewrite_rules', 15 );
 
