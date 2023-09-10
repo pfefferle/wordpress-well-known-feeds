@@ -188,7 +188,7 @@ add_action( 'init', __NAMESPACE__ . '\rewrite_rules', 15 );
  * Add rewrite rules for .well-known/feeds.
  */
 function flush_rewrite_rules() {
-	__NAMESPACE__\rewrite_rules();
+	namespace\rewrite_rules();
 	\flush_rewrite_rules();
 }
 register_activation_hook( __FILE__, __NAMESPACE__ . '\flush_rewrite_rules' );
