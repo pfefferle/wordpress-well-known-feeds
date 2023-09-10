@@ -155,14 +155,16 @@ function get_post_format_link( $post_format ) {
  */
 function parse_request( $wp ) {
 	if (
-		array_key_exists( 'well-known', $wp->query_vars ) &&
-		'feeds' === $wp->query_vars['well-known']
+		! array_key_exists( 'well-known', $wp->query_vars ) ||
+		'feeds' !== $wp->query_vars['well-known']
 	) {
-		header( 'Content-Type: text/xml; charset=' . get_option( 'blog_charset' ), true );
-
-		load_template( plugin_dir_path( __FILE__ ) . '/well-known-feeds-template.php', true );
-		exit;
+		return;
 	}
+
+	header( 'Content-Type: text/xml; charset=' . get_option( 'blog_charset' ), true );
+
+	load_template( plugin_dir_path( __FILE__ ) . '/well-known-feeds-template.php', true );
+	exit;
 }
 add_action( 'parse_request', __NAMESPACE__ . '\parse_request' );
 
