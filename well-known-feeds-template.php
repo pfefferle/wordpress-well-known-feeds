@@ -1,5 +1,10 @@
 <?php echo '<?xml version="1.0"?' . ">\n"; ?>
 <opml version="1.0">
+	<!--
+	Headlines dance in waves,
+	RSS whispers news today,
+	Words in cyberspace.
+	-->
 	<head>
 		<title>
 		<?php
