@@ -6,12 +6,8 @@
 	Words in cyberspace.
 	-->
 	<head>
-		<title>
-		<?php
-			/* translators: %s: Site title. */
-			printf( __( '%s Feeds', 'wellknownfeeds' ), esc_attr( get_bloginfo( 'name', 'display' ) ) );
-		?>
-		</title>
+		<?php /* translators: %s: Site title. */ ?>
+		<title><?php printf( __( '%s Feeds', 'wellknownfeeds' ), esc_attr( get_bloginfo( 'name', 'display' ) ) ); ?></title>
 		<dateCreated><?php echo gmdate( 'D, d M Y H:i:s' ); ?> GMT</dateCreated>
 		<?php
 		/**
@@ -25,10 +21,11 @@
 	<body>
 		<outline text="Blog">
 		<?php
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 		$feeds = \Well_Known_Feeds\get_blog_feeds();
 		foreach ( (array) $feeds as $feed ) :
 			?>
-<outline text="<?php echo esc_attr( $feed['title'] ); ?>" title="<?php echo esc_attr( $feed['title'] ); ?>" type="rss" xmlUrl="<?php echo esc_url( $feed['href'] ); ?>" version="<?php echo esc_attr( strtoupper( $feed['version'] ) ); ?>"/>
+<outline text="<?php echo esc_attr( $feed['text'] ); ?>" description="<?php echo esc_attr( $feed['description'] ); ?>" type="rss" xmlUrl="<?php echo esc_url( $feed['href'] ); ?>" version="<?php echo esc_attr( strtoupper( $feed['version'] ) ); ?>"/>
 			<?php
 		endforeach; // $bookmarks
 		?>

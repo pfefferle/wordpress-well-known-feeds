@@ -42,9 +42,10 @@ function get_blog_feeds( $args = array() ) {
 
 	foreach ( $post_formats as $post_format ) {
 		$feeds[] = array(
-			'title'   => sprintf( $args['posttypetitle'], \get_post_format_string( $post_format ), $args['separator'], \esc_attr( \strtoupper( \get_default_feed() ) ) ),
-			'href'    => get_post_format_archive_feed_link( $post_format ),
-			'version' => \get_default_feed(),
+			'text'        => \get_post_format_string( $post_format ),
+			'description' => sprintf( $args['posttypetitle'], \get_post_format_string( $post_format ), $args['separator'], \esc_attr( \strtoupper( \get_default_feed() ) ) ),
+			'href'        => esc_url( get_post_format_archive_feed_link( $post_format ) ),
+			'version'     => \get_default_feed(),
 		);
 	}
 
@@ -56,23 +57,26 @@ function get_blog_feeds( $args = array() ) {
 		'post-format-standard' === $wp_query->query['post_format']
 	) {
 		$feeds[] = array(
-			'title'   => sprintf( $args['posttypetitle'], get_post_format_string( 'standard' ), $args['separator'], \esc_attr( \strtoupper( \get_default_feed() ) ) ),
-			'href'    => get_post_format_archive_feed_link( 'standard' ),
-			'version' => \get_default_feed(),
+			'text'        => esc_attr( get_post_format_string( 'standard' ) ),
+			'description' => sprintf( $args['posttypetitle'], get_post_format_string( 'standard' ), $args['separator'], \esc_attr( \strtoupper( \get_default_feed() ) ) ),
+			'href'        => esc_url( get_post_format_archive_feed_link( 'standard' ) ),
+			'version'     => \get_default_feed(),
 		);
 	}
 
 	foreach ( array( 'rss2', 'atom' ) as $type ) {
 		$feeds[] = array(
-			'title'   => esc_attr( sprintf( $args['feedtitle'], __( 'All Posts', 'wellknownfeeds' ), $args['separator'], esc_attr( strtoupper( $type ) ) ) ),
-			'href'    => esc_url( get_feed_link( $type ) ),
-			'version' => $type,
+			'text'        => esc_attr( __( 'All Posts', 'wellknownfeeds' ) ),
+			'description' => esc_attr( sprintf( $args['feedtitle'], __( 'All Posts', 'wellknownfeeds' ), $args['separator'], esc_attr( strtoupper( $type ) ) ) ),
+			'href'        => esc_url( get_feed_link( $type ) ),
+			'version'     => $type,
 		);
 
 		$feeds[] = array(
-			'title'   => esc_attr( sprintf( $args['comstitle'], $args['separator'], esc_attr( strtoupper( $type ) ) ) ),
-			'href'    => esc_url( get_feed_link( 'comments_' . $type ) ),
-			'version' => $type,
+			'text'        => esc_attr( __( 'All Comments', 'wellknownfeeds' ) ),
+			'description' => esc_attr( sprintf( $args['comstitle'], $args['separator'], esc_attr( strtoupper( $type ) ) ) ),
+			'href'        => esc_url( get_feed_link( 'comments_' . $type ) ),
+			'version'     => $type,
 		);
 	}
 
