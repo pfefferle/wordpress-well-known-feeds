@@ -1,5 +1,5 @@
-<?php echo '<?xml version="1.0"?' . ">\n"; ?>
-<?php echo '<?xml-stylesheet type="text/xsl" href="' . esc_url( plugins_url( 'well-known-feeds.xsl', __FILE__ ) ) . '"?>'; ?>
+<?php echo '<?xml version="1.0"?>' . PHP_EOL; ?>
+<?php printf( '<?xml-stylesheet type="text/xsl" href="%s"?>' . PHP_EOL, esc_url( plugins_url( 'well-known-feeds.xsl', __FILE__ ) ) ); ?>
 
 <opml version="1.0">
 	<!--
