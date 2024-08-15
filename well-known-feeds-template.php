@@ -1,4 +1,6 @@
 <?php echo '<?xml version="1.0"?' . ">\n"; ?>
+<?php echo '<?xml-stylesheet type="text/xsl" href="' . esc_url( plugins_url( 'well-known-feeds.xsl', __FILE__ ) ) . '"?>'; ?>
+
 <opml version="1.0">
 	<!--
 	Headlines dance in waves,

@@ -17,7 +17,7 @@ services:
     links:
       - db
     ports:
-      - "8777:80"
+      - "8778:80"
     volumes:
       - .:/var/www/html/wp-content/plugins/well-known-feeds
     restart: always
