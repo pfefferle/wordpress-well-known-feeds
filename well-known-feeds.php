@@ -14,6 +14,42 @@
 
 namespace Well_Known_Feeds;
 
+/**
+ * Feed types registered with WordPress.
+ *
+ * Returns the feed slugs WordPress knows about (`rdf`, `rss`, `rss2`, `atom`
+ * plus anything added via {@see add_feed()}), excluding the generic `feed`
+ * rewrite base which is just an alias for the site default.
+ *
+ * @return string[] List of feed type slugs.
+ */
+function get_feed_types() {
+	global $wp_rewrite;
+
+	$feeds = ! empty( $wp_rewrite->feeds ) ? $wp_rewrite->feeds : array( 'rdf', 'rss', 'rss2', 'atom' );
+
+	$feeds = \array_values( \array_diff( $feeds, array( 'feed' ) ) );
+
+	/**
+	 * Filters the list of feed types exposed in the feed listings.
+	 *
+	 * @param string[] $feeds List of feed type slugs.
+	 */
+	return \apply_filters( 'well_known_feed_types', $feeds );
+}
+
+/**
+ * Collect the feeds associated with the blog.
+ *
+ * Emits every registered feed variant (see {@see get_feed_types()}) for each
+ * endpoint: the theme's post-format archives (only those that actually have
+ * content), all posts and all comments. Values are returned raw; consumers are
+ * responsible for escaping for their output format.
+ *
+ * @param array $args Optional. Title/separator overrides.
+ *
+ * @return array[] List of feed descriptors (`text`, `description`, `href`, `version`).
+ */
 function get_blog_feeds( $args = array() ) {
 	$defaults = array(
 		/* translators: Separator between blog name and feed type in feed links */
@@ -26,61 +62,135 @@ function get_blog_feeds( $args = array() ) {
 		'comstitle'     => \__( 'Comments %1$s %2$s Feed', 'wellknownfeeds' ),
 	);
 
-	$args  = wp_parse_args( $args, $defaults );
-	$feeds = array();
+	$args       = \wp_parse_args( $args, $defaults );
+	$feeds      = array();
+	$feed_types = get_feed_types();
 
-	// does theme support post formats
-	$post_formats = \get_theme_support( 'post-formats' );
-
-	if ( $post_formats ) {
-		$post_formats = current( $post_formats );
-	} else {
-		$post_formats = array();
-	}
-
+	// Theme-supported post formats, plus the synthetic "standard" bucket.
+	$post_formats   = \get_theme_support( 'post-formats' );
+	$post_formats   = $post_formats ? \current( $post_formats ) : array();
 	$post_formats[] = 'standard';
 
 	foreach ( $post_formats as $post_format ) {
-		$feeds[] = array(
-			'text'        => \get_post_format_string( $post_format ),
-			'description' => sprintf( $args['posttypetitle'], \get_post_format_string( $post_format ), $args['separator'], \esc_attr( \strtoupper( \get_default_feed() ) ) ),
-			'href'        => esc_url( get_post_format_archive_feed_link( $post_format ) ),
-			'version'     => \get_default_feed(),
-		);
+		// Only advertise formats that actually have an archive, i.e. content.
+		if ( ! get_post_format_link( $post_format ) ) {
+			continue;
+		}
+
+		$label = \get_post_format_string( $post_format );
+
+		foreach ( $feed_types as $type ) {
+			$href = get_post_format_archive_feed_link( $post_format, $type );
+
+			if ( ! $href ) {
+				continue;
+			}
+
+			$feeds[] = array(
+				'text'        => $label,
+				'description' => \sprintf( $args['posttypetitle'], $label, $args['separator'], \strtoupper( $type ) ),
+				'href'        => $href,
+				'version'     => $type,
+			);
+		}
 	}
 
-	// Add "standard" post-format feed discovery
-	global $wp_query;
-	if (
-		\is_archive() &&
-		\isset( $wp_query->query['post_format'] ) &&
-		'post-format-standard' === $wp_query->query['post_format']
-	) {
-		$feeds[] = array(
-			'text'        => esc_attr( get_post_format_string( 'standard' ) ),
-			'description' => sprintf( $args['posttypetitle'], get_post_format_string( 'standard' ), $args['separator'], \esc_attr( \strtoupper( \get_default_feed() ) ) ),
-			'href'        => esc_url( get_post_format_archive_feed_link( 'standard' ) ),
-			'version'     => \get_default_feed(),
-		);
-	}
+	$all_posts    = \__( 'All Posts', 'wellknownfeeds' );
+	$all_comments = \__( 'All Comments', 'wellknownfeeds' );
 
-	foreach ( array( 'rss2', 'atom' ) as $type ) {
+	foreach ( $feed_types as $type ) {
 		$feeds[] = array(
-			'text'        => esc_attr( __( 'All Posts', 'wellknownfeeds' ) ),
-			'description' => esc_attr( sprintf( $args['feedtitle'], __( 'All Posts', 'wellknownfeeds' ), $args['separator'], esc_attr( strtoupper( $type ) ) ) ),
-			'href'        => esc_url( get_feed_link( $type ) ),
+			'text'        => $all_posts,
+			'description' => \sprintf( $args['feedtitle'], $all_posts, $args['separator'], \strtoupper( $type ) ),
+			'href'        => \get_feed_link( $type ),
 			'version'     => $type,
 		);
 
 		$feeds[] = array(
-			'text'        => esc_attr( __( 'All Comments', 'wellknownfeeds' ) ),
-			'description' => esc_attr( sprintf( $args['comstitle'], $args['separator'], esc_attr( strtoupper( $type ) ) ) ),
-			'href'        => esc_url( get_feed_link( 'comments_' . $type ) ),
+			'text'        => $all_comments,
+			'description' => \sprintf( $args['comstitle'], $args['separator'], \strtoupper( $type ) ),
+			'href'        => \get_feed_link( 'comments_' . $type ),
 			'version'     => $type,
 		);
 	}
 
 	return $feeds;
+}
+
+/**
+ * Build the "feed menu" structure as defined in draft-nottingham-feed-menu-00.
+ *
+ * All registered variants of the same feed are merged into a single feed
+ * object: the RSS family under the spec's `rss` member (preferring RSS 2.0),
+ * plus `atom` and any other registered type (json, as1, as2, …) under a member
+ * named after its slug. Clients ignore members they do not recognise.
+ *
+ * @see https://www.ietf.org/archive/id/draft-nottingham-feed-menu-00.html
+ *
+ * @param array $args Optional. Arguments passed on to {@see get_blog_feeds()}.
+ *
+ * @return array The feed menu object.
+ */
+function get_feed_menu( $args = array() ) {
+	$items = array();
+
+	foreach ( get_grouped_feeds( $args ) as $title => $variants ) {
+		$item = array( 'feed-title' => $title );
+
+		foreach ( $variants as $feed ) {
+			// The spec defines `rss` and `atom` members and tells clients to
+			// ignore members they do not recognise, so map the RSS family (rss,
+			// rss2, rdf) to the `rss` member and expose every other registered
+			// feed type (atom, json, as1, as2, …) under a member named after its
+			// slug.
+			$key = \in_array( $feed['version'], array( 'rss', 'rss2', 'rdf' ), true ) ? 'rss' : $feed['version'];
+
+			// Prefer RSS 2.0 for the `rss` member; other RSS variants only fill
+			// an empty slot.
+			if ( 'rss' === $key && isset( $item['rss'] ) && 'rss2' !== $feed['version'] ) {
+				continue;
+			}
+
+			$item[ $key ] = $feed['href'];
+		}
+
+		$items[] = $item;
+	}
+
+	$menu = array(
+		'$schema'   => \plugins_url( 'feed-menu-schema.json', __FILE__ ),
+		/* translators: %s: Site title. */
+		'feed-menu' => \sprintf( \__( '%s Feeds', 'wellknownfeeds' ), \get_bloginfo( 'name' ) ),
+		'items'     => $items,
+	);
+
+	/**
+	 * Filters the feed menu object before it is served.
+	 *
+	 * @param array $menu The feed menu object.
+	 */
+	return \apply_filters( 'well_known_feed_menu', $menu );
+}
+
+/**
+ * Group the blog feeds by their source title.
+ *
+ * Each group collects the registered feed variants (RSS, Atom, JSON, …) that
+ * point at the same content, so the OPML document can nest them under a single
+ * parent outline, mirroring the JSON feed menu's feed objects.
+ *
+ * @param array $args Optional. Passed on to {@see get_blog_feeds()}.
+ *
+ * @return array[] Map of source title => list of feed variant descriptors.
+ */
+function get_grouped_feeds( $args = array() ) {
+	$groups = array();
+
+	foreach ( get_blog_feeds( $args ) as $feed ) {
+		$groups[ $feed['text'] ][] = $feed;
+	}
+
+	return $groups;
 }
 
 /**
@@ -121,11 +231,16 @@ function get_post_format_archive_feed_link( $post_format, $feed = '' ) {
 }
 
 /**
- * Adds support for "standard" post-format archive links.
+ * Resolve a post-format archive link.
  *
- * @param string $post_format
+ * Delegates to core for real post formats, so a format without content (no
+ * term yet) resolves to `false` and is skipped by the callers. Adds support for
+ * the synthetic "standard" post-format, which core does not handle, by building
+ * its archive link from the rewrite permastruct.
  *
- * @return void
+ * @param string $post_format The post format slug.
+ *
+ * @return string|false The archive link, or false if it cannot be resolved.
  */
 function get_post_format_link( $post_format ) {
 	if ( 'standard' !== $post_format ) {
@@ -137,8 +252,7 @@ function get_post_format_link( $post_format ) {
 	$termlink = $wp_rewrite->get_extra_permastruct( 'post_format' );
 
 	if ( empty( $termlink ) ) {
-		$termlink = '?post_format=standard';
-		$termlink = \home_url( $termlink );
+		$termlink = \home_url( '?post_format=' . \rawurlencode( 'standard' ) );
 	} else {
 		$termlink = \str_replace( '%post_format%', 'standard', $termlink );
 		$termlink = \home_url( \user_trailingslashit( $termlink, 'category' ) );
@@ -158,17 +272,23 @@ function get_post_format_link( $post_format ) {
  * @param WP $wp the WordPress environment for the request
  */
 function parse_request( $wp ) {
-	if (
-		! array_key_exists( 'well-known', $wp->query_vars ) ||
-		'feeds' !== $wp->query_vars['well-known']
-	) {
+	if ( ! array_key_exists( 'well-known', $wp->query_vars ) ) {
 		return;
 	}
 
-	header( 'Content-Type: text/xml; charset=' . \get_option( 'blog_charset' ), true );
+	switch ( $wp->query_vars['well-known'] ) {
+		case 'feeds':
+			header( 'Content-Type: text/xml; charset=' . \get_option( 'blog_charset' ), true );
 
-	\load_template( \plugin_dir_path( __FILE__ ) . '/well-known-feeds-template.php', true );
-	exit;
+			\load_template( \plugin_dir_path( __FILE__ ) . '/well-known-feeds-template.php', true );
+			exit;
+
+		case 'feed-menu':
+			header( 'Content-Type: application/json; charset=' . \get_option( 'blog_charset' ), true );
+
+			echo \wp_json_encode( get_feed_menu(), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
+			exit;
+	}
 }
 \add_action( 'parse_request', __NAMESPACE__ . '\parse_request' );
 
@@ -185,6 +305,7 @@ function query_vars( $vars ) {
  * Add rewrite rules for .well-known/feeds.
  */
 function rewrite_rules() {
+	add_rewrite_rule( '^.well-known/feed-menu\.json$', 'index.php?well-known=feed-menu', 'top' );
 	add_rewrite_rule( '^.well-known/feeds', 'index.php?well-known=feeds', 'top' );
 }
 \add_action( 'init', __NAMESPACE__ . '\rewrite_rules', 15 );

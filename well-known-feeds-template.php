@@ -21,16 +21,20 @@
 		?>
 	</head>
 	<body>
-		<outline text="Blog">
 		<?php
-		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
-		$feeds = \Well_Known_Feeds\get_blog_feeds();
-		foreach ( (array) $feeds as $feed ) :
+		$groups = \Well_Known_Feeds\get_grouped_feeds();
+		foreach ( (array) $groups as $group_title => $variants ) :
 			?>
-<outline text="<?php echo esc_attr( $feed['text'] ); ?>" description="<?php echo esc_attr( $feed['description'] ); ?>" type="rss" xmlUrl="<?php echo esc_url( $feed['href'] ); ?>" version="<?php echo esc_attr( strtoupper( $feed['version'] ) ); ?>"/>
+		<outline text="<?php echo esc_attr( $group_title ); ?>">
 			<?php
-		endforeach; // $bookmarks
-		?>
+			foreach ( (array) $variants as $feed ) :
+				$version = strtoupper( $feed['version'] );
+				?>
+			<outline text="<?php echo esc_attr( sprintf( '%1$s (%2$s)', $feed['text'], $version ) ); ?>" description="<?php echo esc_attr( $feed['description'] ); ?>" type="rss" xmlUrl="<?php echo esc_url( $feed['href'] ); ?>" version="<?php echo esc_attr( $version ); ?>"/>
+			<?php endforeach; ?>
 		</outline>
+			<?php
+		endforeach;
+		?>
 	</body>
 </opml>

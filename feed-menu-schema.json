@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Feed Menu Document",
+  "description": "Validation schema for the .well-known/feed-menu.json document defined in draft-nottingham-feed-menu-00. Based on the draft's Appendix A, relaxed to allow the `$schema` reference on the menu object and additional feed-format members (e.g. json, as1, as2) on feed objects, which the specification permits.",
+  "type": "object",
+  "$ref": "#/$defs/menuObject",
+  "$defs": {
+    "menuObject": {
+      "type": "object",
+      "required": [
+        "feed-menu",
+        "items"
+      ],
+      "properties": {
+        "$schema": {
+          "type": "string",
+          "format": "uri-reference"
+        },
+        "feed-menu": {
+          "type": "string"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/menuObject"
+              },
+              {
+                "$ref": "#/$defs/feedObject"
+              }
+            ]
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "feedObject": {
+      "type": "object",
+      "required": [
+        "feed-title"
+      ],
+      "anyOf": [
+        {
+          "required": [
+            "rss"
+          ]
+        },
+        {
+          "required": [
+            "atom"
+          ]
+        }
+      ],
+      "properties": {
+        "feed-title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "rss": {
+          "type": "string",
+          "format": "uri-reference"
+        },
+        "atom": {
+          "type": "string",
+          "format": "uri-reference"
+        }
+      },
+      "additionalProperties": {
+        "type": "string",
+        "format": "uri-reference"
+      }
+    }
+  }
+}
