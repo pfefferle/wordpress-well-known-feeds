@@ -51,6 +51,54 @@ This file is in BETA. Please test and contribute to the discussion:
 					.recent {
 						padding-block-end: var(--gap);
 					}
+					.feeds {
+						list-style: none;
+						margin-block: 0.5rem 0;
+						padding: 0;
+						display: grid;
+						gap: 0.4rem;
+					}
+					.feeds li {
+						display: grid;
+						grid-template-columns: 3.5rem 1fr auto;
+						align-items: baseline;
+						gap: 0.25rem 0.6rem;
+					}
+					.feeds .format {
+						font-weight: 600;
+						font-size: 0.8rem;
+						color: #264fa1;
+					}
+					.feeds .url {
+						min-width: 0;
+						font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+						font-size: 0.85rem;
+						word-break: break-all;
+					}
+					.feeds .subscribe {
+						padding: 0.15em 0.7em;
+						border: 1px solid #d0d7de;
+						border-radius: 6px;
+						font-size: 0.8rem;
+						text-decoration: none;
+						white-space: nowrap;
+					}
+					.feeds .subscribe:hover {
+						border-color: #264fa1;
+					}
+					@media (max-width: 32rem) {
+						.feeds li {
+							display: flex;
+							flex-wrap: wrap;
+						}
+						.feeds .url {
+							flex-basis: 100%;
+							order: 1;
+						}
+						.feeds .subscribe {
+							order: 2;
+						}
+					}
 					header img {
 						width: 5em;
 						border-radius: 20%;
@@ -92,20 +140,33 @@ This file is in BETA. Please test and contribute to the discussion:
 
 				<div class="container">
 					<section class="recent">
-						<!-- RSS -->
-						<xsl:for-each select="/opml/body/outline/outline">
+						<!-- One block per feed source, listing its format variants. -->
+						<xsl:for-each select="/opml/body/outline">
 						<div class="pb-5">
 							<h2>
-								<a target="_blank">
-									<xsl:attribute name="href">
-										<xsl:value-of select="@xmlUrl"/>
-									</xsl:attribute>
-									<xsl:value-of select="@text"/>
-								</a>
+								<xsl:value-of select="@text"/>
 							</h2>
-							<small class="meta">
-								<xsl:value-of select="@description" />
-							</small>
+							<ul class="feeds">
+								<xsl:for-each select="outline">
+								<li>
+									<span class="format">
+										<xsl:value-of select="@version"/>
+									</span>
+									<a class="url" target="_blank">
+										<xsl:attribute name="href">
+											<xsl:value-of select="@xmlUrl"/>
+										</xsl:attribute>
+										<xsl:value-of select="@xmlUrl"/>
+									</a>
+									<a class="subscribe" title="Subscribe in your feed reader">
+										<xsl:attribute name="href">
+											<xsl:value-of select="concat('feed:', @xmlUrl)"/>
+										</xsl:attribute>
+										Subscribe
+									</a>
+								</li>
+								</xsl:for-each>
+							</ul>
 						</div>
 						</xsl:for-each>
 					</section>
