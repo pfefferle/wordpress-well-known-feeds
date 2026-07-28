@@ -4,7 +4,7 @@
 
 This plugin adds two well-known endpoints for that:
 
-- **`/.well-known/feeds`**: an [OPML](http://opml.org/) document with all feeds of the site. It ships with an XSL stylesheet, so it is also readable in a browser.
+- **`/.well-known/feeds`**: an [OPML](http://opml.org/) document with all feeds of the site, following [Dan Q's `.well-known/feeds` spec](https://github.com/Dan-Q/well-known-feeds). It ships with an XSL stylesheet, so it is also readable in a browser.
 - **`/.well-known/feed-menu.json`**: a JSON version, following [draft-nottingham-feed-menu-00](https://www.ietf.org/archive/id/draft-nottingham-feed-menu-00.html).
 
 ## What is in the list
