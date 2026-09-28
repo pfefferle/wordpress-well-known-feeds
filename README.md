@@ -19,6 +19,18 @@ Both endpoints list, for every feed type registered in WordPress:
 
 The variants of one source are grouped together. In the JSON menu they become the members of one feed object, in OPML they are nested under one outline.
 
+## Feed discovery in the HTML head
+
+A `<link rel="alternate">` still makes sense for feeds that belong to a page, so the plugin adds a few more to the ones WordPress already prints:
+
+- on a single post: the feeds of its categories and tags, its author and its post format
+- on the homepage: the feeds of all post formats that have content
+- on the "standard" post-format archive: its own feed
+
+Pages don't get a post-format feed, because pages have no post formats.
+
+"Standard" is not a real post format in WordPress, so the plugin also makes `/type/standard/` (and its feeds) work. It lists all posts that have none of the post formats the theme supports.
+
 ## A few things to know
 
 - The feed-menu draft only defines `rss` and `atom`. The extra types (`json`, `as1`, `as2`, …) are added as extra members. The draft says clients should ignore members they do not know, so this stays compatible.
@@ -30,3 +42,4 @@ The variants of one source are grouped together. In the JSON menu they become th
 
 - `well_known_feed_types`: the list of feed types to expose.
 - `well_known_feed_menu`: the whole JSON menu before it is served.
+- `well_known_feeds_discovery_feeds`: the extra feeds printed as `<link rel="alternate">` in the HTML head.
