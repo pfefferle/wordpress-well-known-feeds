@@ -66,12 +66,7 @@ function get_blog_feeds( $args = array() ) {
 	$feeds      = array();
 	$feed_types = get_feed_types();
 
-	// Theme-supported post formats, plus the synthetic "standard" bucket.
-	$post_formats   = \get_theme_support( 'post-formats' );
-	$post_formats   = $post_formats ? \current( $post_formats ) : array();
-	$post_formats[] = 'standard';
-
-	foreach ( $post_formats as $post_format ) {
+	foreach ( get_post_formats() as $post_format ) {
 		// Only advertise formats that actually have an archive, i.e. content.
 		if ( ! get_post_format_link( $post_format ) ) {
 			continue;
@@ -260,6 +255,189 @@ function get_post_format_link( $post_format ) {
 
 	return $termlink;
 }
+
+/**
+ * Make the "standard" post-format archive (and its feeds) work.
+ *
+ * "standard" is not a real term, so core would return an empty result. Query
+ * all posts without any of the theme-supported post formats instead.
+ *
+ * @param \WP_Query $query The query.
+ */
+function query_standard_post_format( $query ) {
+	if (
+		! isset( $query->query_vars['post_format'] ) ||
+		'post-format-standard' !== $query->query_vars['post_format']
+	) {
+		return;
+	}
+
+	$post_formats = \array_diff( get_post_formats(), array( 'standard' ) );
+
+	if ( ! $post_formats ) {
+		return;
+	}
+
+	$terms = array();
+	foreach ( $post_formats as $post_format ) {
+		$terms[] = 'post-format-' . $post_format;
+	}
+
+	$query->is_tax = false;
+
+	unset( $query->query_vars['post_format'] );
+	unset( $query->query_vars['taxonomy'] );
+	unset( $query->query_vars['term'] );
+
+	$query->set(
+		'tax_query',
+		array(
+			array(
+				'taxonomy' => 'post_format',
+				'terms'    => $terms,
+				'field'    => 'slug',
+				'operator' => 'NOT IN',
+			),
+		)
+	);
+}
+\add_action( 'pre_get_posts', __NAMESPACE__ . '\query_standard_post_format' );
+
+/**
+ * The theme-supported post formats, plus the synthetic "standard" format.
+ *
+ * @return string[] List of post format slugs.
+ */
+function get_post_formats() {
+	$post_formats   = \get_theme_support( 'post-formats' );
+	$post_formats   = $post_formats ? \current( $post_formats ) : array();
+	$post_formats[] = 'standard';
+
+	return $post_formats;
+}
+
+/**
+ * Collect the extra feeds to advertise via `<link rel="alternate">`.
+ *
+ * Supplements core's {@see feed_links()} and {@see feed_links_extra()}:
+ *
+ * - on single posts: the feeds of its terms, its author and its post format
+ * - on the homepage: the feeds of all post formats with content
+ * - on the "standard" post-format archive: its own feed, which core skips
+ *   because "standard" is not a real term
+ *
+ * @see https://notiz.blog/2019/02/21/untitled/
+ * @see https://notiz.blog/2019/09/18/eine-posse/
+ * @see https://github.com/dshanske/extra-links
+ *
+ * @param array $args Optional. Title/separator overrides.
+ *
+ * @return array[] List of feeds (`title`, `href`).
+ */
+function get_discovery_feeds( $args = array() ) {
+	$defaults = array(
+		/* translators: Separator between blog name and feed type in feed links */
+		'separator'     => \_x( '&raquo;', 'feed link', 'wellknownfeeds' ),
+		/* translators: 1: blog name, 2: separator(raquo), 3: term name, 4: taxonomy singular name */
+		'taxtitle'      => \__( '%1$s %2$s %3$s %4$s Feed', 'wellknownfeeds' ),
+		/* translators: 1: blog name, 2: separator(raquo), 3: author name */
+		'authortitle'   => \__( '%1$s %2$s Posts by %3$s Feed', 'wellknownfeeds' ),
+		/* translators: 1: blog name, 2: separator(raquo), 3: post format */
+		'posttypetitle' => \__( '%1$s %2$s %3$s Post-Type Feed', 'wellknownfeeds' ),
+	);
+
+	$args  = \wp_parse_args( $args, $defaults );
+	$name  = \get_bloginfo( 'name' );
+	$feeds = array();
+
+	if ( \is_singular() ) {
+		$post = \get_post();
+
+		if ( ! $post ) {
+			return $feeds;
+		}
+
+		foreach ( \wp_get_post_terms( $post->ID, array( 'post_tag', 'category' ) ) as $term ) {
+			$taxonomy = \get_taxonomy( $term->taxonomy );
+
+			$feeds[] = array(
+				'title' => \sprintf( $args['taxtitle'], $name, $args['separator'], $term->name, $taxonomy->labels->singular_name ),
+				'href'  => \get_term_feed_link( $term->term_id, $term->taxonomy ),
+			);
+		}
+
+		if ( $post->post_author ) {
+			$feeds[] = array(
+				'title' => \sprintf( $args['authortitle'], $name, $args['separator'], \get_the_author_meta( 'display_name', $post->post_author ) ),
+				'href'  => \get_author_feed_link( $post->post_author ),
+			);
+		}
+
+		// Pages and other types without post formats have no post-format archive.
+		if ( \post_type_supports( $post->post_type, 'post-formats' ) ) {
+			$post_format = \get_post_format( $post ) ? \get_post_format( $post ) : 'standard';
+
+			$feeds[] = array(
+				'title' => \sprintf( $args['posttypetitle'], $name, $args['separator'], \get_post_format_string( $post_format ) ),
+				'href'  => get_post_format_archive_feed_link( $post_format ),
+			);
+		}
+	}
+
+	if ( \is_home() ) {
+		foreach ( get_post_formats() as $post_format ) {
+			$feeds[] = array(
+				'title' => \sprintf( $args['posttypetitle'], $name, $args['separator'], \get_post_format_string( $post_format ) ),
+				'href'  => get_post_format_archive_feed_link( $post_format ),
+			);
+		}
+	}
+
+	// Check the original request, the query var is removed by query_standard_post_format().
+	global $wp_query;
+	if (
+		\is_archive() &&
+		isset( $wp_query->query['post_format'] ) &&
+		'post-format-standard' === $wp_query->query['post_format']
+	) {
+		$feeds[] = array(
+			'title' => \sprintf( $args['posttypetitle'], $name, $args['separator'], \get_post_format_string( 'standard' ) ),
+			'href'  => get_post_format_archive_feed_link( 'standard' ),
+		);
+	}
+
+	// Drop post formats without content, whose feed link resolves to false.
+	$feeds = \array_values(
+		\array_filter(
+			$feeds,
+			function ( $feed ) {
+				return ! empty( $feed['href'] );
+			}
+		)
+	);
+
+	/**
+	 * Filters the extra feeds advertised via `<link rel="alternate">`.
+	 *
+	 * @param array[] $feeds List of feeds (`title`, `href`).
+	 */
+	return \apply_filters( 'well_known_feeds_discovery_feeds', $feeds );
+}
+
+/**
+ * Print the extra feed discovery links in the HTML head.
+ */
+function print_discovery_links() {
+	foreach ( get_discovery_feeds() as $feed ) {
+		\printf(
+			'<link rel="alternate" type="%s" title="%s" href="%s" />' . PHP_EOL,
+			\esc_attr( \feed_content_type() ),
+			\esc_attr( $feed['title'] ),
+			\esc_url( $feed['href'] )
+		);
+	}
+}
+\add_action( 'wp_head', __NAMESPACE__ . '\print_discovery_links' );
 
 
 /**
