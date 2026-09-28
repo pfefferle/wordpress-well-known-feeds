@@ -1,0 +1,36 @@
+/**
+ * Feed Form block.
+ *
+ * The form uses the markup and classes of the core Search block, so it gets
+ * the theme's search styles. This only adds what a search form doesn't have:
+ * dropdowns and a second field.
+ */
+.wp-block-well-known-feeds-feed-form .wp-block-search__inside-wrapper {
+	flex-wrap: wrap;
+	gap: 10px;
+}
+
+/* Spacing comes from the gap, margins would indent the fields on wrapped rows. */
+.wp-block-well-known-feeds-feed-form .wp-block-search__inside-wrapper > * {
+	margin-left: 0;
+}
+
+/* On small screens, feed type and button move to their own row. */
+.wp-block-well-known-feeds-feed-form .wp-block-search__input {
+	box-sizing: border-box;
+	flex: 1 1 18em;
+}
+
+.wp-block-well-known-feeds-feed-form select.wp-block-search__input {
+	-webkit-appearance: none;
+	appearance: none;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23757575' stroke-width='1.5'/%3E%3C/svg%3E");
+	background-position: right 1em center;
+	background-repeat: no-repeat;
+	padding-right: 2.5em;
+}
+
+/* The feed type only needs a few characters. */
+.wp-block-well-known-feeds-feed-form .wp-block-well-known-feeds-feed-form__type {
+	flex: 0 0 auto;
+}

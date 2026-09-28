@@ -1,0 +1,38 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "well-known-feeds/feed-form",
+	"title": "Feed Form",
+	"category": "widgets",
+	"icon": "rss",
+	"description": "A form to subscribe to the feed of a category, a tag or a post format.",
+	"keywords": [ "feed", "rss", "category", "tag", "follow" ],
+	"textdomain": "wellknownfeeds",
+	"attributes": {
+		"source": {
+			"type": "string",
+			"enum": [ "category", "post_tag", "post_format" ],
+			"default": "category"
+		},
+		"tagLimit": {
+			"type": "integer",
+			"default": 50
+		}
+	},
+	"supports": {
+		"html": false,
+		"align": true,
+		"color": {
+			"link": true
+		},
+		"spacing": {
+			"margin": true,
+			"padding": true
+		},
+		"typography": {
+			"fontSize": true
+		}
+	},
+	"editorScript": "file:./index.js",
+	"style": [ "wp-block-search", "file:./style.css" ]
+}

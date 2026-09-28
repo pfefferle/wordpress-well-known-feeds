@@ -476,6 +476,13 @@ function register_blocks() {
 		)
 	);
 
+	\register_block_type_from_metadata(
+		__DIR__ . '/blocks/feed-form',
+		array(
+			'render_callback' => __NAMESPACE__ . '\render_feed_form_block',
+		)
+	);
+
 	$types = array();
 	foreach ( get_feed_types() as $type ) {
 		$types[ $type ] = get_feed_type_label( $type );
@@ -520,8 +527,194 @@ function render_feed_types_block( $attributes ) {
 		);
 	}
 
-	return \sprintf( '<ul %1$s>%2$s</ul>', \get_block_wrapper_attributes(), $items );
+	return \sprintf( '<ul %1$s>%2$s</ul>', \get_block_wrapper_attributes( array( 'class' => 'wp-block-list' ) ), $items );
 }
+
+/**
+ * Render the Feed Form block.
+ *
+ * A plain GET form, so it works without JavaScript. It submits to the
+ * homepage and {@see redirect_feed_form()} sends the visitor to the real feed
+ * URL.
+ *
+ * @param array $attributes The block attributes.
+ *
+ * @return string The block HTML.
+ */
+function render_feed_form_block( $attributes ) {
+	$source = isset( $attributes['source'] ) ? $attributes['source'] : 'category';
+	$id     = \wp_unique_id( 'well-known-feeds-' );
+
+	switch ( $source ) {
+		case 'post_tag':
+			$label = \__( 'Tag', 'wellknownfeeds' );
+			$field = render_feed_form_tag_field( $id, isset( $attributes['tagLimit'] ) ? $attributes['tagLimit'] : 50 );
+			break;
+
+		case 'post_format':
+			$label = \__( 'Post format', 'wellknownfeeds' );
+			$field = render_feed_form_post_format_field( $id );
+			break;
+
+		default:
+			$label = \__( 'Category', 'wellknownfeeds' );
+			$field = \wp_dropdown_categories(
+				array(
+					'name'         => 'cat',
+					'id'           => $id,
+					'class'        => 'wp-block-search__input',
+					'hierarchical' => true,
+					'orderby'      => 'name',
+					'echo'         => false,
+				)
+			);
+	}
+
+	// Nothing to pick, e.g. no categories or post formats with content.
+	if ( ! $field ) {
+		return '';
+	}
+
+	$types = '';
+	foreach ( get_feed_types() as $type ) {
+		$types .= \sprintf(
+			'<option value="%1$s"%2$s>%3$s</option>',
+			\esc_attr( $type ),
+			\selected( $type, \get_default_feed(), false ),
+			\esc_html( get_feed_type_label( $type ) )
+		);
+	}
+
+	// Markup and classes of the core Search block, so the form gets the theme's search styles.
+	return \sprintf(
+		'<form %1$s action="%2$s" method="get">
+			<input type="hidden" name="well-known-feed-form" value="1" />
+			<label class="wp-block-search__label" for="%3$s">%4$s</label>
+			<div class="wp-block-search__inside-wrapper">
+				%5$s
+				<label class="screen-reader-text" for="%3$s-type">%6$s</label>
+				<select class="wp-block-search__input wp-block-well-known-feeds-feed-form__type" name="feed" id="%3$s-type">%7$s</select>
+				<button type="submit" class="wp-block-search__button wp-element-button">%8$s</button>
+			</div>
+		</form>',
+		\get_block_wrapper_attributes( array( 'class' => 'wp-block-search wp-block-search__button-outside wp-block-search__text-button' ) ),
+		\esc_url( \home_url( '/' ) ),
+		\esc_attr( $id ),
+		\esc_html( $label ),
+		$field,
+		\esc_html__( 'Feed type', 'wellknownfeeds' ),
+		$types,
+		\esc_html__( 'Subscribe', 'wellknownfeeds' )
+	);
+}
+
+/**
+ * The tag field of the Feed Form block.
+ *
+ * Sites often have hundreds of tags, so the dropdown only lists the most used
+ * ones, sorted by name.
+ *
+ * @param string $id    The field ID.
+ * @param int    $limit The number of tags to list.
+ *
+ * @return string The field HTML, or an empty string if there are no tags.
+ */
+function render_feed_form_tag_field( $id, $limit ) {
+	$tags = \get_terms(
+		array(
+			'taxonomy' => 'post_tag',
+			'orderby'  => 'count',
+			'order'    => 'DESC',
+			'number'   => \max( 1, (int) $limit ),
+		)
+	);
+
+	if ( ! $tags || \is_wp_error( $tags ) ) {
+		return '';
+	}
+
+	\usort(
+		$tags,
+		function ( $a, $b ) {
+			return \strnatcasecmp( $a->name, $b->name );
+		}
+	);
+
+	$options = '';
+	foreach ( $tags as $tag ) {
+		$options .= \sprintf( '<option value="%1$s">%2$s</option>', \esc_attr( $tag->slug ), \esc_html( $tag->name ) );
+	}
+
+	return \sprintf( '<select class="wp-block-search__input" name="tag" id="%1$s">%2$s</select>', \esc_attr( $id ), $options );
+}
+
+/**
+ * The post format field of the Feed Form block.
+ *
+ * @param string $id The field ID.
+ *
+ * @return string The field HTML, or an empty string if no post format has content.
+ */
+function render_feed_form_post_format_field( $id ) {
+	$options = '';
+	foreach ( get_post_formats() as $post_format ) {
+		// Only formats with content, the same as in the feed lists.
+		if ( ! get_post_format_link( $post_format ) ) {
+			continue;
+		}
+
+		$options .= \sprintf(
+			'<option value="%1$s">%2$s</option>',
+			\esc_attr( $post_format ),
+			\esc_html( \get_post_format_string( $post_format ) )
+		);
+	}
+
+	if ( ! $options ) {
+		return '';
+	}
+
+	return \sprintf( '<select class="wp-block-search__input" name="post_format" id="%1$s">%2$s</select>', \esc_attr( $id ), $options );
+}
+
+/**
+ * Redirect a Feed Form submission to the real feed URL.
+ *
+ * Without this, visitors would end up at `/?cat=1&feed=atom`. The target is
+ * always built by WordPress from the submitted values, never taken from the
+ * request, so this can't be used as an open redirect.
+ */
+function redirect_feed_form() {
+	if ( empty( $_GET['well-known-feed-form'] ) ) {
+		return;
+	}
+
+	$feed = isset( $_GET['feed'] ) ? \sanitize_key( $_GET['feed'] ) : '';
+
+	if ( ! \in_array( $feed, get_feed_types(), true ) ) {
+		$feed = \get_default_feed();
+	}
+
+	$link = false;
+
+	if ( ! empty( $_GET['cat'] ) ) {
+		$link = \get_term_feed_link( (int) $_GET['cat'], 'category', $feed );
+	} elseif ( ! empty( $_GET['tag'] ) ) {
+		$tag  = \get_term_by( 'slug', \sanitize_title( \wp_unslash( $_GET['tag'] ) ), 'post_tag' );
+		$link = $tag ? \get_term_feed_link( $tag->term_id, 'post_tag', $feed ) : false;
+	} elseif ( ! empty( $_GET['post_format'] ) ) {
+		$link = get_post_format_archive_feed_link( \sanitize_key( $_GET['post_format'] ), $feed );
+	}
+
+	// Unknown term or format: let WordPress handle the request.
+	if ( ! $link ) {
+		return;
+	}
+
+	\wp_safe_redirect( $link );
+	exit;
+}
+\add_action( 'template_redirect', __NAMESPACE__ . '\redirect_feed_form', 1 );
 
 /**
  * Parse request for .well-known/feeds. This is the main entry point for handling
