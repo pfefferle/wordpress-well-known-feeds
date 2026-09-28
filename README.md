@@ -31,6 +31,18 @@ Pages don't get a post-format feed, because pages have no post formats.
 
 "Standard" is not a real post format in WordPress, so the plugin also makes `/type/standard/` (and its feeds) work. It lists all posts that have none of the post formats the theme supports.
 
+## Feed Types block
+
+The "Feed Types" block lists all registered feed types with their URLs, for example for a "follow me" page:
+
+- as1: https://example.com/feed/as1/
+- as2: https://example.com/feed/as2/
+- json: https://example.com/feed/json/
+
+The list is generated, so it updates itself when you add or remove a feed plugin. In the block settings you can pick which types to show. If you pick none (or all), the block shows all of them.
+
+The label is the feed type slug, the same as the end of the URL. A plugin can give its feed a nicer name with the `well_known_feed_type_label` filter.
+
 ## A few things to know
 
 - The feed-menu draft only defines `rss` and `atom`. The extra types (`json`, `as1`, `as2`, …) are added as extra members. The draft says clients should ignore members they do not know, so this stays compatible.
@@ -42,4 +54,5 @@ Pages don't get a post-format feed, because pages have no post formats.
 
 - `well_known_feed_types`: the list of feed types to expose.
 - `well_known_feed_menu`: the whole JSON menu before it is served.
+- `well_known_feed_type_label`: the label of a feed type in the Feed Types block (default: the slug).
 - `well_known_feeds_discovery_feeds`: the extra feeds printed as `<link rel="alternate">` in the HTML head.

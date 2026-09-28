@@ -39,6 +39,27 @@ function get_feed_types() {
 }
 
 /**
+ * The label of a feed type.
+ *
+ * Uses the feed type slug itself (`rss2`, `atom`, `as2`, …), the same as the
+ * last part of the feed URL. Plugins that register a feed can give it a nicer
+ * name via the filter.
+ *
+ * @param string $type The feed type slug.
+ *
+ * @return string The label.
+ */
+function get_feed_type_label( $type ) {
+	/**
+	 * Filters the label of a feed type.
+	 *
+	 * @param string $label The label, defaults to the feed type slug.
+	 * @param string $type  The feed type slug.
+	 */
+	return \apply_filters( 'well_known_feed_type_label', $type, $type );
+}
+
+/**
  * Collect the feeds associated with the blog.
  *
  * Emits every registered feed variant (see {@see get_feed_types()}) for each
@@ -439,6 +460,68 @@ function print_discovery_links() {
 }
 \add_action( 'wp_head', __NAMESPACE__ . '\print_discovery_links' );
 
+/**
+ * Register the Feed Types block.
+ */
+function register_blocks() {
+	// `get_block_wrapper_attributes()` needs WordPress 5.6.
+	if ( ! \function_exists( 'get_block_wrapper_attributes' ) ) {
+		return;
+	}
+
+	\register_block_type_from_metadata(
+		__DIR__ . '/blocks/feed-types',
+		array(
+			'render_callback' => __NAMESPACE__ . '\render_feed_types_block',
+		)
+	);
+
+	$types = array();
+	foreach ( get_feed_types() as $type ) {
+		$types[ $type ] = get_feed_type_label( $type );
+	}
+
+	\wp_add_inline_script(
+		\generate_block_asset_handle( 'well-known-feeds/feed-types', 'editorScript' ),
+		'window.wellKnownFeedsTypes = ' . \wp_json_encode( $types ) . ';',
+		'before'
+	);
+}
+\add_action( 'init', __NAMESPACE__ . '\register_blocks' );
+
+/**
+ * Render the Feed Types block.
+ *
+ * @param array $attributes The block attributes.
+ *
+ * @return string The block HTML.
+ */
+function render_feed_types_block( $attributes ) {
+	$types = get_feed_types();
+
+	// No selection means all registered types.
+	if ( ! empty( $attributes['types'] ) ) {
+		$types = \array_intersect( $types, (array) $attributes['types'] );
+	}
+
+	if ( ! $types ) {
+		return '';
+	}
+
+	$items = '';
+	foreach ( $types as $type ) {
+		$href   = \get_feed_link( $type );
+		$items .= \sprintf(
+			'<li>%1$s: <a href="%2$s" type="%3$s">%4$s</a></li>',
+			\esc_html( get_feed_type_label( $type ) ),
+			\esc_url( $href ),
+			\esc_attr( \feed_content_type( $type ) ),
+			\esc_html( $href )
+		);
+	}
+
+	return \sprintf( '<ul %1$s>%2$s</ul>', \get_block_wrapper_attributes(), $items );
+}
 
 /**
  * Parse request for .well-known/feeds. This is the main entry point for handling

@@ -1,0 +1,35 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "well-known-feeds/feed-types",
+	"title": "Feed Types",
+	"category": "widgets",
+	"icon": "rss",
+	"description": "A list of all feed types registered on the site, with their URLs.",
+	"keywords": [ "feed", "rss", "atom", "json", "follow" ],
+	"textdomain": "wellknownfeeds",
+	"attributes": {
+		"types": {
+			"type": "array",
+			"items": {
+				"type": "string"
+			},
+			"default": []
+		}
+	},
+	"supports": {
+		"html": false,
+		"align": true,
+		"color": {
+			"link": true
+		},
+		"spacing": {
+			"margin": true,
+			"padding": true
+		},
+		"typography": {
+			"fontSize": true
+		}
+	},
+	"editorScript": "file:./index.js"
+}
