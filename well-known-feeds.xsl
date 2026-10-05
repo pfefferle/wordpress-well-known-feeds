@@ -37,6 +37,9 @@ This file is in BETA. Please test and contribute to the discussion:
 						margin-block-end: var(--gap);
 						padding-block: calc(var(--gap) / 2);
 					}
+					.intro p {
+						margin-block: 0.5rem 0;
+					}
 					.intro .container {
 						gap: 1rem;
 						grid-template-columns:  4fr 2fr;
@@ -109,12 +112,26 @@ This file is in BETA. Please test and contribute to the discussion:
 				<nav class="intro">
 					<div class="container">
 						<div>
-							<h1>
-								<xsl:value-of select="/opml/head/title"/>
-							</h1>
 							<p>
-								<xsl:value-of select="/opml/head/dateCreated"/>
+								<strong>This website publishes web feeds.</strong> Feeds let you follow updates from a site in a feed reader.
 							</p>
+							<p>
+								This page collects the available feeds in one predictable place, so feed readers and other tools can find them without guessing.
+							</p>
+							<p>
+								Choose a feed below or copy its URL into your feed reader.
+							</p>
+							<p class="meta">
+								New to feeds? Learn more at <a href="https://aboutfeeds.com/">About Feeds</a>.
+							</p>
+							<header>
+								<h1>
+									<xsl:value-of select="/opml/head/title"/>
+								</h1>
+								<p class="meta">
+									Last updated <xsl:value-of select="/opml/head/dateCreated"/>
+								</p>
+							</header>
 						</div>
 						<svg xmlns="http://www.w3.org/2000/svg" version="1.1" id="OPMLicon" width="128" height="128" viewBox="0 0 256 256">
 							<title>OPML icon</title>
