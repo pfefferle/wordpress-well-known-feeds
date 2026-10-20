@@ -48,6 +48,7 @@ This file is in BETA. Please test and contribute to the discussion:
 						align-items: center;
 						}
 					}
+					.intro svg { width: 5rem; height: auto; justify-self: end; }
 					.recent {
 						padding-block-end: var(--gap);
 					}

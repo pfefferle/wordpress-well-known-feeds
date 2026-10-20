@@ -1,0 +1,254 @@
+/**
+ * Shows /.well-known/feeds as a page in browsers without XSLT.
+ *
+ * Browsers with XSLT apply well-known-feeds.xsl and never run this script.
+ * The others run it, because the OPML has an XHTML script element in it,
+ * and it replaces the XML with the same page as the stylesheet, see
+ * https://jakearchibald.com/2025/making-xml-human-readable-without-xslt/
+ *
+ * The translated labels are passed in a JSON script element with the id
+ * "well-known-feeds-l10n".
+ */
+( function () {
+	const XHTML = 'http://www.w3.org/1999/xhtml';
+	const opml = document.documentElement;
+
+	/**
+	 * Creates an HTML element. Text is added as text, never as markup.
+	 *
+	 * @param {string}           name       The tag name.
+	 * @param {Object}           attributes The attributes.
+	 * @param {...(Node|string)} children   The children.
+	 * @return {Element} The element.
+	 */
+	const el = ( name, attributes = {}, ...children ) => {
+		const element = document.createElementNS( XHTML, name );
+
+		for ( const [ key, value ] of Object.entries( attributes ) ) {
+			element.setAttribute( key, value );
+		}
+
+		element.append( ...children.filter( ( child ) => null !== child ) );
+
+		return element;
+	};
+
+	/**
+	 * Parses markup of the plugin itself, e.g. a translation with a link.
+	 *
+	 * @param {string} html The markup.
+	 * @return {Node[]} The nodes.
+	 */
+	const markup = ( html ) => [ ...new DOMParser().parseFromString( html, 'text/html' ).body.childNodes ];
+
+	/**
+	 * Returns a URL if it is a web address, e.g. not "javascript:".
+	 *
+	 * @param {string|null} url The URL.
+	 * @return {string|null} The absolute URL, or null.
+	 */
+	const webUrl = ( url ) => {
+		try {
+			const parsed = new URL( url, window.location.href );
+			return [ 'http:', 'https:' ].includes( parsed.protocol ) ? parsed.href : null;
+		} catch ( error ) {
+			return null;
+		}
+	};
+
+	// Chrome ignores defer in XML documents and runs the script before the
+	// rest of the document is parsed.
+	document.addEventListener( 'DOMContentLoaded', () => {
+		const l10n = JSON.parse( document.getElementById( 'well-known-feeds-l10n' ).textContent );
+		const title = opml.querySelector( 'head > title' )?.textContent || '';
+		const created = opml.querySelector( 'head > dateCreated' )?.textContent;
+		const sources = [ ...opml.querySelectorAll( 'body > outline' ) ];
+
+		/**
+		 * Renders a feed with its format, address and subscribe link.
+		 *
+		 * @param {Element} outline The outline of the feed.
+		 * @return {Element|null} The list item, or null without a web address.
+		 */
+		const feed = ( outline ) => {
+			const href = webUrl( outline.getAttribute( 'xmlUrl' ) );
+
+			if ( ! href ) {
+				return null;
+			}
+
+			return el(
+				'li',
+				{},
+				el( 'span', { class: 'format' }, outline.getAttribute( 'version' ) || '' ),
+				el( 'a', { class: 'url', target: '_blank', href }, href ),
+				el( 'a', { class: 'subscribe', title: l10n.subscribeIn, href: 'feed:' + href }, l10n.subscribe )
+			);
+		};
+
+		const style = `
+			* { box-sizing: border-box; }
+			svg { max-width: 100%; }
+			body { --gap: 5vw; margin: 0; font-family: system-ui; line-height: 1.7; }
+			h1,h2,h3 { margin-block-start: 0; margin-block-end: 0; }
+			.pb-5 { padding-bottom: calc(var(--gap) / 3); }
+			.meta { color: #676767; }
+			.container {
+				display: grid;
+				gap: var(--gap);
+				max-width: 46rem;
+				width: 95%;
+				margin: auto;
+			}
+			.intro {
+				background-color: #F0F8FF;
+				margin-block-end: var(--gap);
+				padding-block: calc(var(--gap) / 2);
+			}
+			.intro .container {
+				gap: 1rem;
+				grid-template-columns:  4fr 2fr;
+				align-items: top;
+			}
+			@media (min-width: 40rem) {
+				.intro .container {
+				grid-template-columns:  4fr 1fr;
+				align-items: center;
+				}
+			}
+			.intro svg { width: 5rem; height: auto; justify-self: end; }
+			.recent {
+				padding-block-end: var(--gap);
+			}
+			.feeds {
+				list-style: none;
+				margin-block: 0.5rem 0;
+				padding: 0;
+				display: grid;
+				gap: 0.4rem;
+			}
+			.feeds li {
+				display: grid;
+				grid-template-columns: 3.5rem 1fr auto;
+				align-items: baseline;
+				gap: 0.25rem 0.6rem;
+			}
+			.feeds .format {
+				font-weight: 600;
+				font-size: 0.8rem;
+				color: #264fa1;
+			}
+			.feeds .url {
+				min-width: 0;
+				font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+				font-size: 0.85rem;
+				word-break: break-all;
+			}
+			.feeds .subscribe {
+				padding: 0.15em 0.7em;
+				border: 1px solid #d0d7de;
+				border-radius: 6px;
+				font-size: 0.8rem;
+				text-decoration: none;
+				white-space: nowrap;
+			}
+			.feeds .subscribe:hover {
+				border-color: #264fa1;
+			}
+			@media (max-width: 32rem) {
+				.feeds li {
+					display: flex;
+					flex-wrap: wrap;
+				}
+				.feeds .url {
+					flex-basis: 100%;
+					order: 1;
+				}
+				.feeds .subscribe {
+					order: 2;
+				}
+			}
+		`;
+
+		const icon = markup( `
+			<svg xmlns="http://www.w3.org/2000/svg" version="1.1" id="OPMLicon" width="128" height="128" viewBox="0 0 256 256">
+				<title></title>
+				<defs>
+					<linearGradient x1="0.903" y1="0.903" x2="0.096" y2="0.096" id="OPMLg">
+						<stop offset="0.0" stop-color="#264fa1"/>
+						<stop offset="0.1134" stop-color="#2658a1"/>
+						<stop offset="0.2984" stop-color="#2570a1"/>
+						<stop offset="0.5" stop-color="#2492a1"/>
+						<stop offset="0.6147" stop-color="#2489a0"/>
+						<stop offset="0.8017" stop-color="#26719f"/>
+						<stop offset="1.0" stop-color="#27509d"/>
+					</linearGradient>
+				</defs>
+				<rect width="256" height="256" rx="55" ry="55" x="0" y="0" fill="#244fa1"/>
+				<rect width="246" height="246" rx="50" ry="50" x="5" y="5" fill="#2492a1"/>
+				<rect width="236" height="236" rx="47" ry="47" x="10" y="10" fill="url(#OPMLg)"/>
+				<circle cx="128" cy="128" r="23" fill="#fff"/>
+				<path fill="#fff" d="M128 35a93 93 0 1 0 93 93A93 93 0 0 0 128 35Zm0 158a65 65 0 1 1 65-65A65 65 0 0 1 128 193Z"/>
+			</svg>
+		` ).find( ( node ) => 'svg' === node.localName );
+		icon.querySelector( 'title' ).textContent = l10n.icon;
+
+		const html = el(
+			'html',
+			{},
+			el(
+				'head',
+				{},
+				el( 'title', {}, title ),
+				el( 'meta', { name: 'viewport', content: 'width=device-width, initial-scale=1, maximum-scale=1' } ),
+				el( 'style', { type: 'text/css' }, style )
+			),
+			el(
+				'body',
+				{},
+				el(
+					'nav',
+					{ class: 'intro' },
+					el(
+						'div',
+						{ class: 'container' },
+						el(
+							'div',
+							{},
+							el( 'p', {}, ...markup( l10n.intro ) ),
+							el( 'p', {}, el( 'small', {}, l10n.collects ) ),
+							el( 'p', {}, el( 'small', {}, l10n.choose ) ),
+							el( 'p', {}, el( 'small', {}, ...markup( l10n.aboutFeeds ) ) )
+						),
+						icon
+					)
+				),
+				el(
+					'div',
+					{ class: 'container' },
+					el(
+						'header',
+						{},
+						el( 'h1', {}, title ),
+						created ? el( 'p', { class: 'meta' }, l10n.lastUpdated.replace( '%s', created ) ) : null
+					),
+					el(
+						'section',
+						{ class: 'recent' },
+						// One block per feed source, listing its format variants.
+						...sources.map( ( source ) =>
+							el(
+								'div',
+								{ class: 'pb-5' },
+								el( 'h2', {}, source.getAttribute( 'text' ) || '' ),
+								el( 'ul', { class: 'feeds' }, ...[ ...source.children ].filter( ( child ) => 'outline' === child.localName ).map( feed ) )
+							)
+						)
+					)
+				)
+			)
+		);
+
+		opml.replaceWith( html );
+	} );
+} )();
