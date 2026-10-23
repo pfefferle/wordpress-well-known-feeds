@@ -1,5 +1,5 @@
 <?php echo '<?xml version="1.0"?>' . PHP_EOL; ?>
-<?php printf( '<?xml-stylesheet type="text/xsl" href="%s"?>' . PHP_EOL, esc_url( plugins_url( 'well-known-feeds.xsl', __FILE__ ) ) ); ?>
+<?php printf( '<?xml-stylesheet type="text/xsl" href="%s"?>' . PHP_EOL, esc_url( add_query_arg( 'ver', \Well_Known_Feeds\STYLESHEET_VERSION, plugins_url( 'well-known-feeds.xsl', __FILE__ ) ) ) ); ?>
 
 <opml version="1.0">
 <?php
@@ -36,7 +36,7 @@ printf(
 
 printf(
 	"\t" . '<script xmlns="http://www.w3.org/1999/xhtml" src="%s" defer=""/>' . "\n", // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript -- An OPML document has no wp_head().
-	esc_url( add_query_arg( 'ver', filemtime( __DIR__ . '/assets/js/well-known-feeds.js' ), plugins_url( 'assets/js/well-known-feeds.js', __FILE__ ) ) )
+	esc_url( add_query_arg( 'ver', \Well_Known_Feeds\STYLESHEET_VERSION, plugins_url( 'assets/js/well-known-feeds.js', __FILE__ ) ) )
 );
 ?>
 	<!--

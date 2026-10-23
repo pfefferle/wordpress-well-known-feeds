@@ -15,6 +15,16 @@
 namespace Well_Known_Feeds;
 
 /**
+ * The stylesheet "version".
+ *
+ * Used as the value of the version query argument of the stylesheet and the
+ * script, so that browsers re-fetch them when the markup or translations change.
+ *
+ * @var string
+ */
+const STYLESHEET_VERSION = '1';
+
+/**
  * Feed types registered with WordPress.
  *
  * Returns the feed slugs WordPress knows about (`rdf`, `rss`, `rss2`, `atom`
