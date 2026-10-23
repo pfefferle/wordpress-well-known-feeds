@@ -1,43 +1,28 @@
 <?php echo '<?xml version="1.0"?>' . PHP_EOL; ?>
-<?php printf( '<?xml-stylesheet type="text/xsl" href="%s"?>' . PHP_EOL, esc_url( add_query_arg( 'ver', \Well_Known_Feeds\STYLESHEET_VERSION, plugins_url( 'well-known-feeds.xsl', __FILE__ ) ) ) ); ?>
 
 <opml version="1.0">
 <?php
 /*
- * The script shows the OPML in browsers without XSLT. The labels are
- * translated here and passed to the script in a JSON script element.
+ * The script shows the OPML as a page in the browser. Translations are
+ * loaded the WordPress way: the JSON of the script is passed in a script
+ * element with the id "well-known-feeds-translations".
  */
-$well_known_feeds_l10n = array(
-	'intro'       => sprintf(
-		/* translators: %1$s: opening strong tag; %2$s: closing strong tag. */
-		esc_html__( '%1$sThis website publishes web feeds.%2$s Feeds let you follow updates from a site in a feed reader.', 'wellknownfeeds' ),
-		'<strong>',
-		'</strong>'
-	),
-	'collects'    => __( 'This page collects the available feeds in one predictable place, so feed readers and other tools can find them without guessing.', 'wellknownfeeds' ),
-	'choose'      => __( 'Choose a feed below or copy its URL into your feed reader.', 'wellknownfeeds' ),
-	'aboutFeeds'  => sprintf(
-		/* translators: %1$s: opening link tag to aboutfeeds.com; %2$s: closing link tag. */
-		esc_html__( 'New to feeds? Learn more at %1$sAbout Feeds%2$s.', 'wellknownfeeds' ),
-		'<a href="https://aboutfeeds.com/">',
-		'</a>'
-	),
-	'icon'        => __( 'OPML icon', 'wellknownfeeds' ),
-	/* translators: %s: Date the list was created. */
-	'lastUpdated' => __( 'Last updated %s', 'wellknownfeeds' ),
-	'subscribe'   => __( 'Subscribe', 'wellknownfeeds' ),
-	'subscribeIn' => __( 'Subscribe in your feed reader', 'wellknownfeeds' ),
-);
+$well_known_feeds_scripts      = \Well_Known_Feeds\get_script_urls();
+$well_known_feeds_translations = load_script_textdomain( \Well_Known_Feeds\SCRIPT, 'wellknownfeeds' );
 
-printf(
-	"\t" . '<script xmlns="http://www.w3.org/1999/xhtml" type="application/json" id="well-known-feeds-l10n">%s</script>' . "\n",
-	htmlspecialchars( wp_json_encode( $well_known_feeds_l10n ), ENT_XML1 | ENT_NOQUOTES | ENT_SUBSTITUTE, 'UTF-8' ) // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped for XML.
-);
+if ( $well_known_feeds_translations ) {
+	printf(
+		"\t" . '<script xmlns="http://www.w3.org/1999/xhtml" type="application/json" id="well-known-feeds-translations">%s</script>' . "\n",
+		htmlspecialchars( $well_known_feeds_translations, ENT_XML1 | ENT_NOQUOTES | ENT_SUBSTITUTE, 'UTF-8' ) // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped for XML.
+	);
+}
 
-printf(
-	"\t" . '<script xmlns="http://www.w3.org/1999/xhtml" src="%s" defer=""/>' . "\n", // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript -- An OPML document has no wp_head().
-	esc_url( add_query_arg( 'ver', \Well_Known_Feeds\STYLESHEET_VERSION, plugins_url( 'assets/js/well-known-feeds.js', __FILE__ ) ) )
-);
+foreach ( $well_known_feeds_scripts as $well_known_feeds_src ) {
+	printf(
+		"\t" . '<script xmlns="http://www.w3.org/1999/xhtml" src="%s" defer=""/>' . "\n", // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript -- An OPML document has no wp_head().
+		htmlspecialchars( $well_known_feeds_src, ENT_XML1 | ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8' ) // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped for XML.
+	);
+}
 ?>
 	<!--
 	Headlines dance in waves,

@@ -15,14 +15,71 @@
 namespace Well_Known_Feeds;
 
 /**
- * The stylesheet "version".
- *
- * Used as the value of the version query argument of the stylesheet and the
- * script, so that browsers re-fetch them when the markup or translations change.
+ * The plugin version.
  *
  * @var string
  */
-const STYLESHEET_VERSION = '1';
+const VERSION = '1.0.0';
+
+/**
+ * The handle of the script that shows the feed list in the browser.
+ *
+ * @var string
+ */
+const SCRIPT = 'well-known-feeds';
+
+/**
+ * The URLs of the script that shows the feed list in the browser and of its
+ * dependencies, in load order.
+ *
+ * The script is registered like any other, with wp-i18n for the
+ * translations. An OPML document has no wp_head(), so the URLs are built
+ * from the registry like WP_Scripts does.
+ *
+ * @return string[] The script URLs.
+ */
+function get_script_urls() {
+	$scripts = \wp_scripts();
+
+	if ( ! $scripts->query( SCRIPT ) ) {
+		\wp_register_script(
+			SCRIPT,
+			\plugins_url( 'assets/js/well-known-feeds.js', __FILE__ ),
+			array( 'wp-i18n' ),
+			VERSION,
+			array( 'strategy' => 'defer' )
+		);
+	}
+
+	$scripts->all_deps( SCRIPT );
+	$handles        = $scripts->to_do;
+	$scripts->to_do = array();
+	$urls           = array();
+
+	foreach ( $handles as $handle ) {
+		$script = $scripts->registered[ $handle ];
+
+		// Aliases like "jquery" have no source of their own.
+		if ( ! $script->src ) {
+			continue;
+		}
+
+		$src = $script->src;
+
+		if ( ! \preg_match( '|^(https?:)?//|', $src ) && ! ( $scripts->content_url && 0 === \strpos( $src, $scripts->content_url ) ) ) {
+			$src = $scripts->base_url . $src;
+		}
+
+		if ( null !== $script->ver ) {
+			$src = \add_query_arg( 'ver', $script->ver ? $script->ver : $scripts->default_version, $src );
+		}
+
+		/** This filter is documented in wp-includes/class-wp-scripts.php */
+		$urls[] = (string) \apply_filters( 'script_loader_src', $src, $handle );
+	}
+
+	return $urls;
+}
 
 /**
  * Feed types registered with WordPress.

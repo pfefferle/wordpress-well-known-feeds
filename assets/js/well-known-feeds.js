@@ -1,17 +1,35 @@
 /**
- * Shows /.well-known/feeds as a page in browsers without XSLT.
+ * Shows /.well-known/feeds as a page in the browser.
  *
- * Browsers with XSLT apply well-known-feeds.xsl and never run this script.
- * The others run it, because the OPML has an XHTML script element in it,
- * and it replaces the XML with the same page as the stylesheet, see
+ * Browsers run this script when they get the OPML as XML with an XHTML
+ * script element in it. It replaces the XML with HTML, see
  * https://jakearchibald.com/2025/making-xml-human-readable-without-xslt/
  *
- * The translated labels are passed in a JSON script element with the id
- * "well-known-feeds-l10n".
+ * Translations are loaded the WordPress way: the JSON of the script is
+ * passed in a script element with the id "well-known-feeds-translations".
  */
 ( function () {
 	const XHTML = 'http://www.w3.org/1999/xhtml';
+	const DOMAIN = 'wellknownfeeds';
+	const i18n = window.wp && window.wp.i18n;
+	const __ = i18n ? i18n.__ : ( text ) => text;
+	const sprintf = i18n ? i18n.sprintf : ( text, ...args ) => text.replace( /%(?:(\d)\$)?s/g, ( match, index ) => args[ index ? index - 1 : 0 ] ?? '' );
 	const opml = document.documentElement;
+	let lang = '';
+
+	// Before anything is translated.
+	const translations = document.getElementById( 'well-known-feeds-translations' );
+	if ( i18n && translations ) {
+		try {
+			const data = JSON.parse( translations.textContent );
+			const localeData = data.locale_data[ DOMAIN ] || data.locale_data.messages;
+			localeData[ '' ].domain = DOMAIN;
+			lang = ( localeData[ '' ].lang || '' ).replace( '_', '-' );
+			i18n.setLocaleData( localeData, DOMAIN );
+		} catch ( error ) {
+			// Untranslated then.
+		}
+	}
 
 	/**
 	 * Creates an HTML element. Text is added as text, never as markup.
@@ -59,7 +77,6 @@
 	// Chrome ignores defer in XML documents and runs the script before the
 	// rest of the document is parsed.
 	document.addEventListener( 'DOMContentLoaded', () => {
-		const l10n = JSON.parse( document.getElementById( 'well-known-feeds-l10n' ).textContent );
 		const title = opml.querySelector( 'head > title' )?.textContent || '';
 		const created = opml.querySelector( 'head > dateCreated' )?.textContent;
 		const sources = [ ...opml.querySelectorAll( 'body > outline' ) ];
@@ -82,7 +99,7 @@
 				{},
 				el( 'span', { class: 'format' }, outline.getAttribute( 'version' ) || '' ),
 				el( 'a', { class: 'url', target: '_blank', href }, href ),
-				el( 'a', { class: 'subscribe', title: l10n.subscribeIn, href: 'feed:' + href }, l10n.subscribe )
+				el( 'a', { class: 'subscribe', title: __( 'Subscribe in your feed reader', 'wellknownfeeds' ), href: 'feed:' + href }, __( 'Subscribe', 'wellknownfeeds' ) )
 			);
 		};
 
@@ -194,11 +211,11 @@
 				<path fill="#fff" d="M128 35a93 93 0 1 0 93 93A93 93 0 0 0 128 35Zm0 158a65 65 0 1 1 65-65A65 65 0 0 1 128 193Z"/>
 			</svg>
 		` ).find( ( node ) => 'svg' === node.localName );
-		icon.querySelector( 'title' ).textContent = l10n.icon;
+		icon.querySelector( 'title' ).textContent = __( 'OPML icon', 'wellknownfeeds' );
 
 		const html = el(
 			'html',
-			{},
+			lang ? { lang } : {},
 			el(
 				'head',
 				{},
@@ -218,10 +235,24 @@
 						el(
 							'div',
 							{},
-							el( 'p', {}, ...markup( l10n.intro ) ),
-							el( 'p', {}, el( 'small', {}, l10n.collects ) ),
-							el( 'p', {}, el( 'small', {}, l10n.choose ) ),
-							el( 'p', {}, el( 'small', {}, ...markup( l10n.aboutFeeds ) ) )
+							el( 'p', {}, ...markup(
+									sprintf(
+										/* translators: %1$s: opening strong tag; %2$s: closing strong tag. */
+										__( '%1$sThis website publishes web feeds.%2$s Feeds let you follow updates from a site in a feed reader.', 'wellknownfeeds' ),
+										'<strong>',
+										'</strong>'
+									)
+								) ),
+							el( 'p', {}, el( 'small', {}, __( 'This page collects the available feeds in one predictable place, so feed readers and other tools can find them without guessing.', 'wellknownfeeds' ) ) ),
+							el( 'p', {}, el( 'small', {}, __( 'Choose a feed below or copy its URL into your feed reader.', 'wellknownfeeds' ) ) ),
+							el( 'p', {}, el( 'small', {}, ...markup(
+										sprintf(
+											/* translators: %1$s: opening link tag to aboutfeeds.com; %2$s: closing link tag. */
+											__( 'New to feeds? Learn more at %1$sAbout Feeds%2$s.', 'wellknownfeeds' ),
+											'<a href="https://aboutfeeds.com/">',
+											'</a>'
+										)
+									) ) )
 						),
 						icon
 					)
@@ -233,7 +264,11 @@
 						'header',
 						{},
 						el( 'h1', {}, title ),
-						created ? el( 'p', { class: 'meta' }, l10n.lastUpdated.replace( '%s', created ) ) : null
+						created ? el( 'p', { class: 'meta' }, sprintf(
+							/* translators: %s: Date the list was created. */
+							__( 'Last updated %s', 'wellknownfeeds' ),
+							created
+						) ) : null
 					),
 					el(
 						'section',
